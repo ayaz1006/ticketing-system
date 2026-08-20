@@ -65,7 +65,7 @@ const syncWorkspaceCreation = inngest.createFunction(
         name: data.name,
         slug: data.slug,
         ownerId: data.created_by,
-        image: data.image_url,
+        image_url: data.image_url,
       },
     });
     //Add creator as Admin of the workspace
@@ -94,7 +94,7 @@ const syncWorkspaceUpdation = inngest.createFunction(
       data: {
         name: data.name,
         slug: data.slug,
-        image: data.image_url,
+        image_url: data.image_url,
       },
     });
   }
