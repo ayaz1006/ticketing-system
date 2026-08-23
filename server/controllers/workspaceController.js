@@ -1,9 +1,49 @@
 import { prisma } from "../db.js";
+import { clerkClient } from "@clerk/express";
+
+const syncWorkspaceMembers = async (workspaceId) => {
+  const memberships =
+    await clerkClient.organizations.getOrganizationMembershipList({
+      organizationId: workspaceId,
+      limit: 500,
+    });
+
+  await Promise.all(
+    memberships.data.map(async (membership) => {
+      const userId = membership.publicUserData?.userId;
+      if (!userId) return;
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) return;
+
+      await prisma.workspaceMember.upsert({
+        where: {
+          userId_workspaceId: { userId, workspaceId },
+        },
+        update: {
+          role: membership.role === "org:admin" ? "ADMIN" : "MEMBER",
+        },
+        create: {
+          userId,
+          workspaceId,
+          role: membership.role === "org:admin" ? "ADMIN" : "MEMBER",
+        },
+      });
+    }),
+  );
+};
 
 // Get all workspaces for users
 export const getUserWorkspaces = async (req, res) => {
   try {
     const { userId } = await req.auth();
+    const userWorkspaces = await prisma.workspace.findMany({
+      where: { members: { some: { userId } } },
+      select: { id: true },
+    });
+
+    await Promise.all(userWorkspaces.map(({ id }) => syncWorkspaceMembers(id)));
+
     const workspaces = await prisma.workspace.findMany({
       where: {
         members: { some: { userId: userId } },

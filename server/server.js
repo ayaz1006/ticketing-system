@@ -1,10 +1,11 @@
 import express from "express";
 import "dotenv/config";
 import cors from "cors";
-import { clerkMiddleware, clerkClient, getAuth } from "@clerk/express";
+import { clerkMiddleware } from "@clerk/express";
 import { serve } from "inngest/express";
 import { inngest, functions } from "./inngest/index.js";
 import workspaceRouter from "./routes/workspaceRoutes.js";
+import clerkWebhookRouter from "./routes/clerkWebhookRoutes.js";
 import projectRouter from "./routes/projectRoutes.js";
 import taskRouter from "./routes/taskRoutes.js";
 import commentRouter from "./routes/commentRoutes.js";
@@ -12,8 +13,11 @@ import { protect } from "./middlewares/middleware.js";
 
 const app = express();
 
-app.use(express.json());
 app.use(cors());
+
+app.use("/api/webhooks", clerkWebhookRouter);
+
+app.use(express.json());
 app.use(clerkMiddleware());
 
 app.get("/", (req, res) => res.send("SERVER IS LIVE!"));
