@@ -29,7 +29,7 @@ export const createProject = async (req, res) => {
 
     if (
       !workspace.members.some(
-        (member) => member.userId === userId && member.role === "admin",
+        (member) => member.userId === userId && member.role === "ADMIN",
       )
     ) {
       return res.status(403).json({
@@ -131,7 +131,7 @@ export const updateProject = async (req, res) => {
 
     if (
       !workspace.members.some(
-        (member) => member.userId === userId && member.role === "admin",
+        (member) => member.userId === userId && member.role === "ADMIN",
       )
     ) {
       const project = await prisma.project.findUnique({
