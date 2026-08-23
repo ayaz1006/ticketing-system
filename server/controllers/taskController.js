@@ -1,4 +1,4 @@
-import prisma from "../prismaClient.js";
+import { prisma } from "../db.js";
 
 // Create task
 export const createTask = async (req, res) => {
