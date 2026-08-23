@@ -13,9 +13,13 @@ export const createTask = async (req, res) => {
       status,
       priority,
       assigneeId,
-      dueDate,
+      due_date,
     } = req.body;
     const origin = req.get("origin");
+
+    if (!due_date) {
+      return res.status(400).json({ message: "Due date is required" });
+    }
 
     //check if user has admin role in the project
     const project = await prisma.project.findUnique({
@@ -43,10 +47,11 @@ export const createTask = async (req, res) => {
         projectId,
         title,
         description,
+        type,
         priority,
         assigneeId,
         status,
-        dueDate: dueDate ? new Date(dueDate) : null,
+        due_date: new Date(due_date),
       },
     });
 
@@ -56,7 +61,7 @@ export const createTask = async (req, res) => {
     });
 
     await inngest.send({
-      name: "app/task.assigned",
+      name: "task/assignment.assigned",
       data: {
         taskId: task.id,
         origin,
