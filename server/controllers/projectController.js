@@ -1,4 +1,4 @@
-import prisma from "../prisma.js";
+import { prisma } from "../db.js";
 
 // Create Project
 export const createProject = async (req, res) => {
@@ -188,11 +188,9 @@ export const addMemberToProject = async (req, res) => {
     }
 
     if (project.team_lead !== userId) {
-      return res
-        .status(403)
-        .json({
-          message: "You are not authorized to add members to this project",
-        });
+      return res.status(403).json({
+        message: "You are not authorized to add members to this project",
+      });
     }
 
     //check if user is already a member of the project
