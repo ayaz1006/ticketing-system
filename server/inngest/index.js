@@ -121,15 +121,30 @@ const syncWorkspaceDeletion = inngest.createFunction(
 const syncWorkspaceMemberCreation = inngest.createFunction(
   {
     id: "sync-workspace-member-from-clerk",
-    triggers: [{ event: "clerk/organization.membership.accepted" }],
+    triggers: [{ event: "clerk/organizationMembership.created" }],
   },
   async ({ event }) => {
     const { data } = event;
-    await prisma.workspaceMember.create({
-      data: {
-        userId: data.user_id,
-        workspaceId: data.organization_id,
-        role: String(data.role).toUpperCase(),
+    const userId = data.public_user_data?.user_id || data.user_id;
+    const workspaceId = data.organization?.id || data.organization_id;
+
+    if (!userId || !workspaceId) {
+      throw new Error(
+        "Clerk membership event is missing user or organization data",
+      );
+    }
+
+    await prisma.workspaceMember.upsert({
+      where: {
+        userId_workspaceId: { userId, workspaceId },
+      },
+      update: {
+        role: data.role === "org:admin" ? "ADMIN" : "MEMBER",
+      },
+      create: {
+        userId,
+        workspaceId,
+        role: data.role === "org:admin" ? "ADMIN" : "MEMBER",
       },
     });
   },
@@ -148,6 +163,10 @@ const sendTaskAssignmentEmail = inngest.createFunction(
       where: { id: taskId },
       include: { assignee: true, project: true },
     });
+
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`);
+    }
 
     await sendEmail({
       to: task.assignee.email,
@@ -173,10 +192,14 @@ const sendTaskAssignmentEmail = inngest.createFunction(
     if (
       new Date(task.due_date).toLocaleDateString() !== new Date().toDateString()
     ) {
-      await step.sleepUntil("wait-for-the-new-date", new Date(task.due_date));
+      const reminderTime = new Date(
+        new Date(task.due_date).getTime() - 60 * 60 * 1000,
+      );
+      await step.sleepUntil("wait-for-reminder", reminderTime);
+      // await step.sleepUntil("wait-for-the-new-date", new Date(task.due_date));
       await step.run("check-if-task-is-completed", async () => {
         const task = await prisma.task.findUnique({
-          wehre: { id: taskId },
+          where: { id: taskId },
           include: { assignee: true, project: true },
         });
 
