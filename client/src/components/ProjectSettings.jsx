@@ -2,8 +2,16 @@ import { format } from "date-fns";
 import { Plus, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import AddProjectMember from "./AddProjectMember";
+import { useDispatch } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import toast from "react-hot-toast";
+import { fetchWorkspaces } from "../features/workspaceSlice"
+import api from "../configs/api";
 
 export default function ProjectSettings({ project }) {
+
+    const dispatch = useDispatch();
+    const { getToken } = useAuth();
 
     const [formData, setFormData] = useState({
         name: "New Website Launch",
@@ -15,12 +23,32 @@ export default function ProjectSettings({ project }) {
         progress: 30,
     });
 
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-
+        e.preventDefault()
+        setIsSubmitting(true)
+        toast.loading("Saving...")
+        try {
+            const token = await getToken();
+            const { data } = await api.put(`/api/projects/${project.id}`, {
+                ...formData,
+                id: project.id,
+                workspaceId: project.workspaceId,
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            setIsDialogOpen(false)
+            dispatch(fetchWorkspaces({ getToken }))
+            toast.dismissAll()
+            toast.success(data.message)
+        } catch (error) {
+            toast.dismissAll()
+            toast.error(error?.response?.data?.message || error.message)
+        } finally {
+            setIsSubmitting(false)
+        }
     };
 
     useEffect(() => {
